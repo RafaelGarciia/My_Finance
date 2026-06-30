@@ -9,7 +9,7 @@ import os
 def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-STYLE = {
+BASE_STYLE = {
     "title"                 : f"{'#ffffff'}",
     "field.selected"        : f"{'#ffffff'} bg:{'#444444'}",
     "option.selected"       : f"{'#ffffff'} bg:{'#444444'}",
@@ -35,10 +35,24 @@ def run_app(get_content, kb: KeyBindings, style: dict | Style | None = None):
 
 def menu(
         title:str,
-        options:list[tuple[str,str]],
+        options:list[str],
         back_option_str: str | None = "Exit",
-        style: dict | Style | None = None
+        style: dict | Style = BASE_STYLE
     ):
+    """
+    Exibe um menu simples com opçoes informadas.\n
+    Retorna o numero da opção selecionada.\n
+    `title`: str\n
+    `options`: list [ str ] = [ label ), ... ]\n
+    `back_option_str`: str = "Exit"\n
+    `style`: dict\n
+    -------------------------------------------------------------------
+    `style class`:\n
+        "title"
+        "option.selected"
+        "option"
+        "hint"
+    """
     
 
     selected_option = [0] # Índice do campo ativo
@@ -47,11 +61,11 @@ def menu(
     def set_keybindings():
         @kb.add("up")
         @kb.add("w")
-        def _(event): selected_option[0] = (selected_option[0] - 1)
+        def _(event): selected_option[0] = (selected_option[0] - 1) % len(options)
 
         @kb.add("down")
         @kb.add("s")
-        def _(event): selected_option[0] = (selected_option[0] + 1)
+        def _(event): selected_option[0] = (selected_option[0] + 1) % len(options)
 
         @kb.add("enter")
         @kb.add("space")
@@ -62,32 +76,32 @@ def menu(
         def _(event): event.app.exit(result="cancel")
 
     def content():
-        opts = [(i + 1, text) for i, text in enumerate(options)]
-        if back_option_str: opts.append((0, back_option_str))
+        opt = [(i + 1, text) for i, text in enumerate(options)]
+        options.append((0, back_option_str))
 
         lines = [("class:title", f"  {title}\n\n")]
-        for i, (key, label) in enumerate(opts):
+        for i, (key, label) in enumerate(options):
             active = (i == selected_option[0])
             ls = "class:option.selected" if active else "class:option"
-            lines.append((ls, f"  {label:<16}  "))
+            lines.append((ls, f"  {label:<16}  \n"))
         lines.append(("", "\n"))
+
         lines.append(("class:hint",
-            f"\n  [ ↑↓ / W S ] - Navegar    [ Enter / Space ] - Confirmar    [ Esc ] - {back_option_str}  "
+            f"  {'[ ↑↓ / W S ] - Navegar':<30}  \n  {'[ Enter / Space ] - Confirmar':<30}  \n  {('[ Esc ] - '+back_option_str):<30}  "
         ))
         
         return lines
 
     set_keybindings()
-    result = run_app(content, kb, style)
-    
-    input(result)
+    return run_app(content, kb, style)[0] +1
 
 
 def formulario(
         title: str,
         fields: list[tuple[str,str]],
-        default: dict,
-        style: dict | Style | None = None
+        default: dict = {},
+        style: dict | Style = BASE_STYLE,
+        save_button_str: str = "SAVE"
     ) -> dict | None:
     """
     Exibe um formulário com os campos fornecidos.\n
@@ -162,14 +176,14 @@ def formulario(
             lines.append((vs, f"{values[key]}{'|' if active else ''}\n"))
         lines.append(("", "\n"))
         if selected_option[0] == save_button:
-            lines.append(("class:save_button.selected",  "      ❯ [ SALVAR ]\n"))
+            lines.append(("class:save_button.selected",  f"  {'❯ [ '+save_button_str+' ]':^30}  \n"))
         else:
-            lines.append(("class:save_button", "        [ SALVAR ]\n"))
+            lines.append(("class:save_button", f"  {'  [ '+save_button_str+' ]':^30}  \n"))
         
         lines.append(("class:hint",
-            "\n  [ ↑↓ ] - Navegar    [ Enter ] - Próximo/Salvar    [ Esc ] - Cancelar  "
+            f"\n  {'[ ↑↓ ] - Navegar':<30}  \n  {'[ Enter ] - Próximo/Salvar':<30}  \n  {'[ Esc ] - Cancelar':<30}  "
         ))
-        
+
         return lines
 
     set_keybindings()
@@ -177,8 +191,3 @@ def formulario(
     if result == "ok":
         return {**values, "id": default.get("id")}
     return None
-
-
-clear()
-#print(formulario("Formulário de Teste", [("nome", "Nome"), ("idade", "Idade"), ("data", "Data")], {"nome": "Rafa", "idade":"26", "data": "01/01/2023"}, STYLE))
-menu('teste', [("nome", "Nome"), ("idade", "Idade"), ("data", "Data")], style=STYLE)
