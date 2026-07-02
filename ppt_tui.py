@@ -29,12 +29,42 @@ BASE_STYLE = {
 }
 
 def run_application(content: Callable, key_bindings: KeyBindings, style: dict | Style | None):
-    ...
+    """
+    Run a prompt_toolkit application with the given content, key bindings, and style.
+    
+    :param content: A :class:`~Callable` that returns the content to be displayed.
+    :param key_bindings: A :class:`~KeyBindings` object containing the key bindings for the application.
+    :param style: A :class:`~dict` or :class:`~Style` object defining the style for the application. If None, default style will be used.
+    :return: The result of the application run - :class:`~None`.
+    """
+
+    _layout = Layout(Window(FormattedTextControl(content, focusable=True)))
+    _style = style if isinstance(style, Style) else Style.from_dict(style or {})
+    
+    return Application(
+        layout=_layout,
+        key_bindings=key_bindings,
+        style=_style,
+        full_screen=False,
+        refresh_interval=0.05,
+        mouse_support=False
+    ).run()
 
 
 # Widgets V
 
 class Menu:
+    """
+    Selection menu with keyboard navigation and custom bindings.
+
+    
+    :param str title: The title of the menu.
+    :param list[str] options: A :class:`list` of option :class:`str` to display in the menu.
+    :param str | None text_back_bnt: Optional :class:`str` for the back button text.
+    :param dict | Style style: Optional :class:`dict` or :class:`Style` for custom styling. Defaults to BASE_STYLE.        
+
+    :return: The index of the selected option or "cancel" if the back button is pressed.
+    """
 
     def __init__(
             self,
@@ -60,7 +90,7 @@ class Menu:
 
         self._setup_default_bindings()
 
-    # Internal Functions
+    # V Internal Functions
 
     def _setup_default_bindings(self) -> None:
         """Setup default keyboard bindings."""
@@ -99,8 +129,7 @@ class Menu:
         return lines
         
 
-
-    # External Functions
+    # V External Functions
 
     def add_binding(self, key: str, handler: Callable) -> None:
         """Add a custom key binding.
@@ -124,14 +153,38 @@ class Menu:
             Integer | String (int | str): int for the selected option or str for the configured KeyBindings
         """
 
-        _layout = Layout(Window(FormattedTextControl(self._content, focusable=True)))
-        _style = self.style if isinstance(self.style, Style) else Style.from_dict(self.style or {})
+        return run_application(self._content, self.keybindings, self.style)
+
+
+class Form:
+    """
+    Form with multiple fields and keyboard navigation.
+
+    :param str title: The title of the form.
+    :param list[dict] fields: A :class:`list` of field :class:`dict` to display in the form.
+    :param dict | Style style: Optional :class:`dict` or :class:`Style` for custom styling. Defaults to BASE_STYLE.
+    """
+    
+    def __init__(
+            self,
+            title: str,
+            fields: list[dict],
+            style: dict | Style = BASE_STYLE,
+        ) -> None:
         
-        return Application(
-            layout=_layout,
-            key_bindings=self.keybindings,
-            style=_style,
-            full_screen=False,
-            refresh_interval=0.05,
-            mouse
+        self.title = title
+        self.fields = fields
+        self.style = style
+
+        self.selected_field = 0
+        self.keybindings = KeyBindings()
+        self._custom_bindings = {}
+        self.hint = (
+            f"  {'[ ↑↓ / W S ] - Navigate':<30}  \n"
+            f"  {'[ Enter / D ] - Edit':<30}  \n"
+            f"  {'[ Esc / A ] - Cancel':<30}  "
         )
+
+        self._setup_default_bindings()
+
+
